@@ -1,10 +1,10 @@
 check\_poodle
 ============
 
-Nagios/Icinga Plugin that checks for SSLv3 support
+Nagios/Icinga Plugin that checks for SSLv2 and SSLv3 support
 
-Uses OpenSSL s\_client to perform support checks for SSLv3
-or STARTTLS/SSLv3 on various services.
+Uses OpenSSL s\_client to perform support checks for SSLv2 and SSLv3
+or STARTTLS/SSLv2, SSLv3 on various services.
 
 Installation
 ------------

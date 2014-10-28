@@ -6,8 +6,17 @@ DEBUG=0
 # Maximum time in seconds to wait for a connection
 TIMEOUT=2
 
+# Perl regular expression to check for SSLv2 support in openssl output
+REGEXPv2='^New,.*SSLv2'
+
 # Perl regular expression to check for SSLv3 support in openssl output
-REGEXP='^New,.*SSLv3'
+REGEXPv3='^New,.*SSLv3'
+
+# Initial result value
+RESULT=0
+
+# Value to use on match
+RESULT_MATCH=1
 
 if [ "x$1" = "x" ]; then
     echo "Usage: $0 <HOST>" >&2
@@ -16,49 +25,78 @@ fi
 
 # $1 = host
 # $2 = port
-checkSSLv3() {
-    test "$DEBUG" = "1" && echo openssl s_client -connect "$1:$2" -ssl3
-    echo | timeout "$TIMEOUT" openssl s_client -connect "$1:$2" -ssl3 2> /dev/null | grep -qP "$REGEXP" && return 1
+checkSSLv2() {
+    test "$DEBUG" = "1" && echo openssl s_client -connect "$1:$2" -ssl2
+    echo | timeout "$TIMEOUT" openssl s_client -connect "$1:$2" -ssl2 2> /dev/null | grep -qP "$REGEXPv2" && return 1
     return 0
 }
 
 # $1 = host
 # $2 = port
 # $3 = protocol
-checkStartTLS() {
-    test "$DEBUG" = "1" && echo openssl s_client -connect "$1:$2"  -starttls "$3" -ssl3
-    echo | timeout "$TIMEOUT" openssl s_client -connect "$1:$2"  -starttls "$3" -ssl3 2> /dev/null | grep -qP "$REGEXP" && return 1
+checkStartSSLv2() {
+    test "$DEBUG" = "1" && echo openssl s_client -connect "$1:$2"  -starttls "$3" -ssl2
+    echo | timeout "$TIMEOUT" openssl s_client -connect "$1:$2"  -starttls "$3" -ssl2 2> /dev/null | grep -qP "$REGEXPv2" && return 1
     return 0
 }
 
-RESULT=0
+# $1 = host
+# $2 = port
+checkSSLv3() {
+    test "$DEBUG" = "1" && echo openssl s_client -connect "$1:$2" -ssl3
+    echo | timeout "$TIMEOUT" openssl s_client -connect "$1:$2" -ssl3 2> /dev/null | grep -qP "$REGEXPv3" && return 1
+    return 0
+}
+
+# $1 = host
+# $2 = port
+# $3 = protocol
+checkStartSSLv3() {
+    test "$DEBUG" = "1" && echo openssl s_client -connect "$1:$2"  -starttls "$3" -ssl3
+    echo | timeout "$TIMEOUT" openssl s_client -connect "$1:$2"  -starttls "$3" -ssl3 2> /dev/null | grep -qP "$REGEXPv3" && return 1
+    return 0
+}
+
+# $1 = host
+# $2 = port
+# $3 = protocol
+checkTLS() {
+    checkSSLv2 "$1" "$2" || warn "Port $2 ($3): SSLv2 enabled"
+    checkSSLv3 "$1" "$2" || warn "Port $2 ($3): SSLv3 enabled"
+}
+
+# $1 = host
+# $2 = port
+# $3 = protocol (must be supported by openssl's s_client -starttls parameter)
+checkStartTLS() {
+    checkStartSSLv2 "$1" "$2" "$3" || warn "Port $2 ($3, STARTTLS): SSLv2 enabled"
+    checkStartSSLv3 "$1" "$2" "$3" || warn "Port $2 ($3, STARTTLS): SSLv3 enabled"
+}
+
 # $1 Message
 warn() {
     if [ "$RESULT" = "0" ]; then
         RESULT=1
-        echo -n "SSLv3 accepted on "
-    else
-        echo -n ", "
+        echo "SSLv2/SSLv3 accepted on the following ports:"
     fi
-    echo -n "$1"
-    RESULT=1
+    echo "  $1"
+    RESULT=$RESULT_MATCH
 }
 
-checkSSLv3 "$1" 443 || warn "Port 443 (HTTPS)"
-checkSSLv3 "$1" 465 || warn "Port 465 (SMTPS)"
-checkSSLv3 "$1" 636 || warn "Port 646 (LDAPS)"
-checkSSLv3 "$1" 993 || warn "Port 993 (IMAPS)"
-checkSSLv3 "$1" 995 || warn "Port 995 (POP3S)"
-checkSSLv3 "$1" 5223 || warn "Port 5223 (XMPP)"
+checkTLS "$1" 443 https
+checkTLS "$1" 465 smtps
+checkTLS "$1" 636 ldaps
+checkTLS "$1" 993 imaps
+checkTLS "$1" 995 pop3s
+checkTLS "$1" 5223 xmpp
 
-checkStartTLS "$1" 25 smtp || warn "Port 25 (SMTP, STARTTLS)"
-checkStartTLS "$1" 587 smtp || warn "Port 587 (SMTP, STARTTLS)"
-checkStartTLS "$1" 143 imap || warn "Port 143 (IMAP, STARTTLS)"
-checkStartTLS "$1" 110 pop3 || warn "Port 110 (POP3, STARTTLS)"
-checkStartTLS "$1" 5222 xmpp || warn "Port 5222 (XMPP, STARTTLS)"
-checkStartTLS "$1" 5269 xmpp || warn "Port 5269 (XMPP, STARTTLS)"
-checkStartTLS "$1" 20 ftp || warn "Port 20 (FTP, STARTTLS)"
-checkStartTLS "$1" 21 ftp || warn "Port 21 (FTP, STARTTLS)"
+checkStartTLS "$1" 25 smtp
+checkStartTLS "$1" 587 smtp
+checkStartTLS "$1" 143 imap
+checkStartTLS "$1" 110 pop3
+checkStartTLS "$1" 5222 xmpp
+checkStartTLS "$1" 5269 xmpp
+checkStartTLS "$1" 20 ftp
+checkStartTLS "$1" 21 ftp
 
-echo
 exit $RESULT
