@@ -23,6 +23,7 @@ At the moment, the following ports are queried:
 
 * Port 443 (HTTPS)
 * Port 465 (SMTPS)
+* Port 636 (LDAPS)
 * Port 993 (IMAPS)
 * Port 995 (POP3S)
 * Port 5223 (XMPP)

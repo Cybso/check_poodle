@@ -43,6 +43,7 @@ warn() {
 
 checkSSLv3 "$1" 443 || warn "Port 443 (HTTPS)"
 checkSSLv3 "$1" 465 || warn "Port 465 (SMTPS)"
+checkSSLv3 "$1" 636 || warn "Port 646 (LDAPS)"
 checkSSLv3 "$1" 993 || warn "Port 993 (IMAPS)"
 checkSSLv3 "$1" 995 || warn "Port 995 (POP3S)"
 checkSSLv3 "$1" 5223 || warn "Port 5223 (XMPP)"
