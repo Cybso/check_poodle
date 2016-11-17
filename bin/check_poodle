@@ -77,9 +77,9 @@ checkStartTLS() {
 warn() {
     if [ "$RESULT" = "0" ]; then
         RESULT=1
-        echo "SSLv2/SSLv3 accepted on the following ports:"
+        echo -n "SSLv2/SSLv3 accepted on the following ports:"
     fi
-    echo "  $1"
+    echo -n "  $1"
     RESULT=$RESULT_MATCH
 }
 
@@ -98,5 +98,10 @@ checkStartTLS "$1" 5222 xmpp
 checkStartTLS "$1" 5269 xmpp
 checkStartTLS "$1" 20 ftp
 checkStartTLS "$1" 21 ftp
+
+if [ "$RESULT" != "0" ]; then
+    # Add a final newline
+    echo
+fi
 
 exit $RESULT
